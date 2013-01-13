@@ -7,24 +7,24 @@ var http = require('http')
     }
   , http_options_dailies = {
         host: api.host
-      , path: ['/api/', api.key, '/forecast/q/', api.state, '/', api.city, '.json'].join("")
+      , path: ['/api/', api.key, '/forecast10day/q/', api.state, '/', api.city, '.json'].join("")
     }
   , http_options_hourlies = {
         host: api.host
-      , path: ['/api/', api.key, '/hourly/q/', api.state, '/', api.city, '.json'].join("")
+      , path: ['/api/', api.key, '/hourly10day/q/', api.state, '/', api.city, '.json'].join("")
     }
   , forecast = {
         epoch: 0
       , hourlies: []
       , unit: 60*60*1000 // milliseconds
     }
-  , async_counter = 0;
 
 // initialize forecast for the next 6 days
 forecast.epoch = new Date()
 forecast.epoch.setHours(0, 0, 0, 0)
-for (var h = 0; h < 24*6; h++) {
-  forecast.hourlies.push(new Date(value=forecast.epoch.getTime()+(h*forecast.unit)))
+for (var h = 0; h < 24*12; h++) {
+  //forecast.hourlies.push(new Date(value=forecast.epoch.getTime()+(h*forecast.unit)))
+  forecast.hourlies.push(null)
 }
 
 function windchill(t, v) {
@@ -42,7 +42,6 @@ parse_dailies = function(response) {
     }
   }
 
-  async_counter++
   var str = ''
   response.on('data', function(chunk) {
     str += chunk
@@ -56,8 +55,7 @@ parse_dailies = function(response) {
       high_time.setHours(16, 0, 0, 0)
       forecast.hourlies[(high_time-forecast.epoch)/forecast.unit] = dailies[a].high
     }
-    async_counter--
-    interpolate_forecast()
+    http.request(http_options_hourlies, parse_hourlies).end()
   })
 }
 
@@ -70,7 +68,6 @@ parse_hourlies = function(response) {
     }
   }
 
-  async_counter++
   var str = ''
   response.on('data', function(chunk) {
     str += chunk
@@ -80,15 +77,12 @@ parse_hourlies = function(response) {
     for (var a in hourlies) {
       forecast.hourlies[(hourlies[a].time-forecast.epoch)/forecast.unit] = hourlies[a].temp
     }
-    async_counter--
     interpolate_forecast()
   })
 }
 
 interpolate_forecast = function() {
-  if (async_counter > 0) return
   console.log(forecast)
 }
 
-//http.request(http_options_dailies, parse_dailies).end()
-http.request(http_options_hourlies, parse_hourlies).end()
+http.request(http_options_dailies, parse_dailies).end()
